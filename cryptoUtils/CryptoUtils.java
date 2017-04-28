@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package BeardsCrypto.cryptoUtils;
+package cryptoUtils;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
