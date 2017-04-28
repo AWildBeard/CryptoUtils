@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cryptoUtils;
+package AESDESede;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
