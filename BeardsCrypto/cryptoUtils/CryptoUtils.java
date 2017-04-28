@@ -1,8 +1,11 @@
+package BeardsCrypto.cryptoUtils;
+
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
+import java.nio.file.NoSuchFileException;
 import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -31,6 +34,7 @@ public class CryptoUtils {
                     iterations = 65536,
                     cipherMode;
 
+    // Constructors
     public CryptoUtils() {
         this.cipherMode = null;
         this.password = null;
@@ -40,7 +44,6 @@ public class CryptoUtils {
 
     }
 
-    // Constructors
     public CryptoUtils(String password, Integer cipherMode, String algorithm,
                        String algoSpec, Integer keyStrength) {
 
@@ -52,6 +55,7 @@ public class CryptoUtils {
 
     }
 
+    // Mutators
     public boolean setCipherMode(Integer cipherMode) {
         if (cipherMode == Cipher.DECRYPT_MODE || cipherMode == Cipher.ENCRYPT_MODE) {
             this.cipherMode = cipherMode;
@@ -63,7 +67,6 @@ public class CryptoUtils {
 
     }
 
-    // Mutators
     public void setPassword(String password) {
         this.password = password;
 
@@ -110,22 +113,26 @@ public class CryptoUtils {
             return false;
 
         if (algorithm.contains(acceptableAlgoSpecs[0])){
-            if (keyStrength != acceptableKeyStrengths[0] || keyStrength != acceptableKeyStrengths[2]) {
+            if (keyStrength == acceptableKeyStrengths[0] || keyStrength == acceptableKeyStrengths[2]) {
                 this.keyStrength = keyStrength;
                 return true;
             }
+
             else {
                 return false;
+
             }
         }
 
         if (algorithm.contains(acceptableAlgoSpecs[1])) {
-            if (keyStrength != acceptableKeyStrengths[1]) {
+            if (keyStrength == acceptableKeyStrengths[1]) {
                 this.keyStrength = keyStrength;
                 return true;
             }
+
             else {
                 return false;
+
             }
         }
 
@@ -159,6 +166,7 @@ public class CryptoUtils {
 
     }
 
+    // General functions
     public boolean isReady() {
 
         if (algorithm == null || algoSpec == null
@@ -169,49 +177,68 @@ public class CryptoUtils {
         return true;
     }
 
-    // General functions
-    public Cipher getInitializedCipher() {
+    private void encryptDecryptReady(File inputFile, File outputFile) throws IOException {
+
+        if (!isReady() || inputFile == null || outputFile == null)
+            throw new IllegalArgumentException("Required parameters not initialized");
+
+        if (!inputFile.canRead())
+            throw new NoSuchFileException("Could not find file: " + inputFile.toString());
+
+        if (!outputFile.exists()) {
+            if (!outputFile.createNewFile())
+                throw new IOException("Could not create file: " + outputFile.toString());
+
+        }
+
+        else if (!outputFile.canWrite()) {
+            throw new IOException("Could not write to file: " + outputFile.toString());
+
+        }
+
+    }
+
+    public Cipher getInitializedCipher() throws InvalidKeySpecException, NoSuchAlgorithmException,
+                                         NoSuchPaddingException, InvalidParameterSpecException,
+                                         InvalidKeyException, InvalidAlgorithmParameterException {
 
         if (!isReady())
             throw new IllegalArgumentException("Required parameters not initialized");
 
-        Cipher cipher = null;
+        Cipher cipher;
 
-        try {
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
-            KeySpec spec = new PBEKeySpec(this.password.toCharArray(), this.salt,
-                                          this.iterations, this.keyStrength);
+        KeySpec spec = new PBEKeySpec(this.password.toCharArray(), this.salt,
+                                      this.iterations, this.keyStrength);
 
-            SecretKey tmp = factory.generateSecret(spec);
+        SecretKey tmp = factory.generateSecret(spec);
 
-            SecretKey secret = new SecretKeySpec(tmp.getEncoded(), this.algoSpec);
+        SecretKey secret = new SecretKeySpec(tmp.getEncoded(), this.algoSpec);
 
-            cipher = Cipher.getInstance(this.algorithm);
+        cipher = Cipher.getInstance(this.algorithm);
 
-            AlgorithmParameters params = cipher.getParameters();
+        AlgorithmParameters params = cipher.getParameters();
 
-            byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
+        byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
 
-            cipher.init(this.cipherMode, secret, new IvParameterSpec(iv));
-
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException | NoSuchPaddingException
-                 | InvalidParameterSpecException | InvalidKeyException | InvalidAlgorithmParameterException
-                 cipherError) {
-
-            System.out.println(cipherError.getMessage());
-            cipherError.printStackTrace(System.out);
-
-        }
+        cipher.init(this.cipherMode, secret, new IvParameterSpec(iv));
 
         return cipher;
 
     }
 
-    public boolean doEncryption(Cipher cipher, File inputFile, File outputFile) {
+    public boolean doEncryption(Cipher cipher, File inputFile, File outputFile) throws IOException {
 
-        if (!isReady() || inputFile == null || outputFile == null)
-            throw new IllegalArgumentException("Required parameters not initialized");
+        try {
+            encryptDecryptReady(inputFile, outputFile);
+
+        } catch (IOException readyException) {
+            System.out.print(readyException.getMessage());
+            readyException.printStackTrace(System.out);
+            return false;
+
+        }
 
         int remainingLength = 16;
 
@@ -220,43 +247,44 @@ public class CryptoUtils {
 
         }
 
-        try {
+        Object streamType = new FileInputStream(inputFile);
+        BufferedInputStream inputStream = new BufferedInputStream((FileInputStream) streamType);
 
-            Object streamType = new FileInputStream(inputFile);
-            BufferedInputStream inputStream = new BufferedInputStream((FileInputStream) streamType);
+        byte[] fileBytes = new byte[(int) inputFile.length() + remainingLength];
 
-            byte[] fileBytes = new byte[(int) inputFile.length() + remainingLength];
-
-            for (int count = 0; count <= remainingLength; count++) {
-                fileBytes[count] = (byte) 11;
-
-            }
-
-            inputStream.read(fileBytes, remainingLength, (int) inputFile.length());
-
-            streamType = new FileOutputStream(outputFile);
-            BufferedOutputStream outStreamType = new BufferedOutputStream((FileOutputStream) streamType);
-
-            CipherOutputStream outputStream = new CipherOutputStream(outStreamType, cipher);
-
-            outputStream.write(fileBytes);
-            outputStream.flush();
-            outputStream.close();
-
-        } catch (IOException encryptionException) {
-            System.out.println(encryptionException.getMessage());
-            encryptionException.printStackTrace(System.out);
+        for (int count = 0; count <= remainingLength; count++) {
+            fileBytes[count] = (byte) 11;
 
         }
+
+        inputStream.read(fileBytes, remainingLength, (int) inputFile.length());
+
+        streamType = new FileOutputStream(outputFile);
+        BufferedOutputStream outStreamType = new BufferedOutputStream((FileOutputStream) streamType);
+
+        CipherOutputStream outputStream = new CipherOutputStream(outStreamType, cipher);
+
+        outputStream.write(fileBytes);
+        outputStream.flush();
+        outputStream.close();
 
         return true;
 
     }
 
-    public boolean doDecryption(Cipher cipher, File inputFile, File outputFile) {
+    public boolean doDecryption(Cipher cipher, File inputFile, File outputFile) throws IOException,
+                                                                                IllegalBlockSizeException,
+                                                                                BadPaddingException {
 
-        if (!isReady() || inputFile == null || outputFile == null)
-            throw new IllegalArgumentException("Required parameters not initialized");
+        try {
+            encryptDecryptReady(inputFile, outputFile);
+
+        } catch (IOException readyException) {
+            System.out.print(readyException.getMessage());
+            readyException.printStackTrace(System.out);
+            return false;
+
+        }
 
         int remainingLength = 16;
 
@@ -265,34 +293,24 @@ public class CryptoUtils {
 
         }
 
-        try {
+        Object streamType = new FileInputStream(inputFile);
+        BufferedInputStream inputStream = new BufferedInputStream((FileInputStream) streamType);
 
-            Object streamType = new FileInputStream(inputFile);
-            BufferedInputStream inputStream = new BufferedInputStream((FileInputStream) streamType);
+        byte[] fileBytes = new byte[(int) inputFile.length()];
 
-            byte[] fileBytes = new byte[(int) inputFile.length()];
+        inputStream.read(fileBytes);
 
-            inputStream.read(fileBytes);
+        byte[] decryptedFile = cipher.doFinal(fileBytes);
 
-            byte[] decryptedFile = cipher.doFinal(fileBytes);
+        streamType = new FileOutputStream(outputFile);
+        BufferedOutputStream outputStream = new BufferedOutputStream((FileOutputStream) streamType);
 
-            streamType = new FileOutputStream(outputFile);
-            BufferedOutputStream outputStream = new BufferedOutputStream((FileOutputStream) streamType);
-
-            outputStream.write(decryptedFile, remainingLength, decryptedFile.length - remainingLength);
-            outputStream.flush();
-            outputStream.close();
-
-        } catch (IOException | IllegalBlockSizeException | BadPaddingException decryptionException) {
-            System.out.println(decryptionException.getMessage());
-            decryptionException.printStackTrace(System.out);
-
-        }
+        outputStream.write(decryptedFile, remainingLength, decryptedFile.length - remainingLength);
+        outputStream.flush();
+        outputStream.close();
 
         return true;
 
     }
-
-
 
 }
