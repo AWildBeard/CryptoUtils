@@ -64,6 +64,7 @@ public class CryptoUtils {
 
     }
 
+    // 5-arg constructor
     public CryptoUtils(String password, Integer cipherMode, String algorithm,
                        String algoSpec, Integer keyStrength) {
 
@@ -95,6 +96,7 @@ public class CryptoUtils {
     public boolean setAlgorithm(String algorithm){
         boolean flag = false;
 
+        // Make sure the algorithm entered is an algorithm the class can use
         for (String algo : acceptableAlgorithms) {
             if (algorithm.equals(algo)) {
                 this.algorithm = algorithm;
@@ -110,10 +112,12 @@ public class CryptoUtils {
     public boolean setAlgoSpec(String algoSpec) {
         boolean flag = false;
 
+        // See if the algorithm is entered before trying to derive the algo spec
         if (this.algorithm == null) {
             return flag;
         }
 
+        // Verify that the algo spec entered is based from the algorithm
         for (String algo : acceptableAlgoSpecs) {
             if (algoSpec.equals(algo)) {
                 if (algorithm.contains(algoSpec)) {
@@ -132,6 +136,7 @@ public class CryptoUtils {
         if (this.algorithm == null)
             return false;
 
+        // Verify that the key strength entered is valid for the algorithm
         if (algorithm.contains(acceptableAlgoSpecs[0])){
             if (keyStrength == acceptableKeyStrengths[0] || keyStrength == acceptableKeyStrengths[2]) {
                 this.keyStrength = keyStrength;
@@ -144,6 +149,7 @@ public class CryptoUtils {
             }
         }
 
+        // Verify that the key strength entered is valid for the algorithm
         if (algorithm.contains(acceptableAlgoSpecs[1])) {
             if (keyStrength == acceptableKeyStrengths[1]) {
                 this.keyStrength = keyStrength;
@@ -189,6 +195,7 @@ public class CryptoUtils {
     // General functions
     public boolean isReady() {
 
+        // Test to see if all the variables are initialized and ready for operation
         if (algorithm == null || algoSpec == null
                 || password == null || keyStrength == null || cipherMode == null)
 
@@ -197,6 +204,7 @@ public class CryptoUtils {
         return true;
     }
 
+    // Test the files to see if the are writable and readable for encryption/ decription
     private void encryptDecryptReady(File inputFile, File outputFile) throws IOException {
 
         if (!isReady() || inputFile == null || outputFile == null)
@@ -218,10 +226,12 @@ public class CryptoUtils {
 
     }
 
+    // Initialize the cipher for the user-selected operation
     public Cipher getInitializedCipher() throws InvalidKeySpecException, NoSuchAlgorithmException,
                                          NoSuchPaddingException, InvalidParameterSpecException,
                                          InvalidKeyException, InvalidAlgorithmParameterException {
 
+        // Check that all the fields are filled out before trying to make a cipher
         if (!isReady())
             throw new IllegalArgumentException("Required parameters not initialized");
 
@@ -248,8 +258,10 @@ public class CryptoUtils {
 
     }
 
+    // Do an encryption cycle with the cipher provided from the above method
     public boolean doEncryption(Cipher cipher, File inputFile, File outputFile) throws IOException {
 
+        // Test to see if the files are readable/ writable etc.
         try {
             encryptDecryptReady(inputFile, outputFile);
 
@@ -260,6 +272,11 @@ public class CryptoUtils {
 
         }
 
+        // Instead of directly padding the password, we pad the file a little based on the
+        // length of the password entered. This is done to ensure that the file contents
+        // returned by a decryption process are always uncorrupted. This also makes it
+        // to where this is the only program that decrypt the file that is encrypted,
+        // without looking at the source code/ guestimating/ doing forensics
         int remainingLength = 16;
 
         if (this.password.length() < remainingLength) {
@@ -277,25 +294,31 @@ public class CryptoUtils {
 
         }
 
+        // Read in the file
         inputStream.read(fileBytes, remainingLength, (int) inputFile.length());
 
         streamType = new FileOutputStream(outputFile);
         BufferedOutputStream outStreamType = new BufferedOutputStream((FileOutputStream) streamType);
 
+        // Make a CipherOutputStream to encrypt and write the file at the same time
         CipherOutputStream outputStream = new CipherOutputStream(outStreamType, cipher);
 
+        // Write, close, and flush the output stream
         outputStream.write(fileBytes);
         outputStream.flush();
         outputStream.close();
 
+        // Return successful operation;
         return true;
 
     }
 
+    // Do an decryption cycle with the cipher provided from the getInitializedCipher method
     public boolean doDecryption(Cipher cipher, File inputFile, File outputFile) throws IOException,
                                                                                 IllegalBlockSizeException,
                                                                                 BadPaddingException {
 
+        // Test to see if the files are readable/ writable etc.
         try {
             encryptDecryptReady(inputFile, outputFile);
 
@@ -306,6 +329,11 @@ public class CryptoUtils {
 
         }
 
+        // Instead of directly padding the password, we pad the file a little based on the
+        // length of the password entered. This is done to ensure that the file contents
+        // returned by a decryption process are always uncorrupted. This also makes it
+        // to where this is the only program that decrypt the file that is encrypted,
+        // without looking at the source code/ guestimating/ doing forensics
         int remainingLength = 16;
 
         if (this.password.length() < remainingLength) {
@@ -318,17 +346,22 @@ public class CryptoUtils {
 
         byte[] fileBytes = new byte[(int) inputFile.length()];
 
+        // Read in the file
         inputStream.read(fileBytes);
 
+        // Decrypt the file
         byte[] decryptedFile = cipher.doFinal(fileBytes);
 
         streamType = new FileOutputStream(outputFile);
         BufferedOutputStream outputStream = new BufferedOutputStream((FileOutputStream) streamType);
 
+        // Write out the neccessary parts of the file
+        // (the file - the padding)
         outputStream.write(decryptedFile, remainingLength, decryptedFile.length - remainingLength);
         outputStream.flush();
         outputStream.close();
 
+        // Return successful operation
         return true;
 
     }
