@@ -262,15 +262,8 @@ public class CryptoUtils {
     public boolean doEncryption(Cipher cipher, File inputFile, File outputFile) throws IOException {
 
         // Test to see if the files are readable/ writable etc.
-        try {
-            encryptDecryptReady(inputFile, outputFile);
-
-        } catch (IOException readyException) {
-            System.out.print(readyException.getMessage());
-            readyException.printStackTrace(System.out);
-            return false;
-
-        }
+        encryptDecryptReady(inputFile, outputFile);
+        outputFile.createNewFile();
 
         // Instead of directly padding the password, we pad the file a little based on the
         // length of the password entered. This is done to ensure that the file contents
@@ -319,15 +312,8 @@ public class CryptoUtils {
                                                                                 BadPaddingException {
 
         // Test to see if the files are readable/ writable etc.
-        try {
-            encryptDecryptReady(inputFile, outputFile);
-
-        } catch (IOException readyException) {
-            System.out.print(readyException.getMessage());
-            readyException.printStackTrace(System.out);
-            return false;
-
-        }
+        encryptDecryptReady(inputFile, outputFile);
+        outputFile.createNewFile();
 
         // Instead of directly padding the password, we pad the file a little based on the
         // length of the password entered. This is done to ensure that the file contents
