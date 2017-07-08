@@ -217,8 +217,9 @@ public class CryptoUtils {
             if (!outputFile.createNewFile())
                 throw new IOException("Could not create file: " + outputFile.toString());
 
-        }
+            outputFile.delete();
 
+        }
         else if (!outputFile.canWrite()) {
             throw new IOException("Could not write to file: " + outputFile.toString());
 
