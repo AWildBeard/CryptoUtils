@@ -266,11 +266,16 @@ public class CryptoUtils {
         encryptDecryptReady(inputFile, outputFile);
         outputFile.createNewFile();
 
-        // Instead of directly padding the password, we pad the file a little based on the
-        // length of the password entered. This is done to ensure that the file contents
-        // returned by a decryption process are always uncorrupted. This also makes it
-        // to where this is the only program that decrypt the file that is encrypted,
-        // without looking at the source code/ guestimating/ doing forensics
+        /*
+         * While the password is indeed padded, the form of encryption intended
+         * to be use with this utility class requires padding the file manually
+         * to ensure the actual contents of the file are not corrupted/ forgotten
+         * to be decrypted. To avoid this, we pad the file loosely based on the
+         * length of the password (There is no way to tell the length of the
+         * password from the encrypted data) as there appears to be a direct correlation
+         * between the length of the password and the amount of bits left
+         * corrupted/ not decrypted on a decryption process.
+         */
         int remainingLength = 16;
 
         if (this.password.length() < remainingLength) {
@@ -316,11 +321,16 @@ public class CryptoUtils {
         encryptDecryptReady(inputFile, outputFile);
         outputFile.createNewFile();
 
-        // Instead of directly padding the password, we pad the file a little based on the
-        // length of the password entered. This is done to ensure that the file contents
-        // returned by a decryption process are always uncorrupted. This also makes it
-        // to where this is the only program that decrypt the file that is encrypted,
-        // without looking at the source code/ guestimating/ doing forensics
+        /*
+         * While the password is indeed padded, the form of encryption intended
+         * to be use with this utility class requires padding the file manually
+         * to ensure the actual contents of the file are not corrupted/ forgotten
+         * to be decrypted. To avoid this, we pad the file loosely based on the
+         * length of the password (There is no way to tell the length of the
+         * password from the encrypted data) as there appears to be a direct correlation
+         * between the length of the password and the amount of bits left
+         * corrupted/ not decrypted on a decryption process.
+         */
         int remainingLength = 16;
 
         if (this.password.length() < remainingLength) {
